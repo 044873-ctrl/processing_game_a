@@ -1,175 +1,151 @@
-var player = {};
-var bullets = [];
-var enemies = [];
-var particles = [];
-var stars = [];
-var score = 0;
-var gameOver = false;
-var frameCounter = 0;
+let canvasWidth = 400;
+let canvasHeight = 600;
+let player = {};
+let playerSpeed = 5;
+let playerR = 12;
+let bullets = [];
+let bulletR = 4;
+let bulletSpeed = 8;
+let enemies = [];
+let enemyR = 12;
+let enemySpeed = 2;
+let explosions = [];
+let explosionCountPerKill = 5;
+let explosionR = 3;
+let explosionLife = 20;
+let stars = [];
+let starCount = 30;
+let score = 0;
+let gameOver = false;
+let shootCooldown = 0;
 function setup(){
-  createCanvas(400,600);
-  player.x = width/2;
-  player.y = height - 30;
-  player.r = 12;
-  player.speed = 5;
-  bullets = [];
-  enemies = [];
-  particles = [];
-  stars = [];
-  score = 0;
-  gameOver = false;
-  frameCounter = 0;
-  for(var i=0;i<30;i++){
-    var s = {
-      x: random(0,width),
-      y: random(0,height),
-      r: random(1,3),
-      speed: random(0.5,2)
-    };
+  createCanvas(canvasWidth, canvasHeight);
+  player.x = canvasWidth/2;
+  player.y = canvasHeight - 40;
+  for(let i=0;i<starCount;i++){
+    let s = {x:random(0,canvasWidth), y:random(0,canvasHeight), vy:random(0.5,1.5), r:random(1,2)};
     stars.push(s);
   }
-  textSize(18);
-  textAlign(LEFT,TOP);
-  noStroke();
+  textSize(20);
+  textAlign(LEFT, TOP);
 }
 function draw(){
   background(0);
-  for(var si=0;si<stars.length;si++){
-    var st = stars[si];
-    fill(255);
-    ellipse(st.x,st.y,st.r,st.r);
-    st.y += st.speed;
-    if(st.y > height){
-      st.y = 0;
-      st.x = random(0,width);
+  for(let i=stars.length-1;i>=0;i--){
+    let s = stars[i];
+    s.y += s.vy;
+    fill(200);
+    noStroke();
+    ellipse(s.x, s.y, s.r*2, s.r*2);
+    if(s.y > height){
+      s.y = -s.r;
+      s.x = random(0, width);
     }
   }
-  frameCounter++;
   if(!gameOver){
     if(keyIsDown(LEFT_ARROW)){
-      player.x -= player.speed;
+      player.x -= playerSpeed;
     }
     if(keyIsDown(RIGHT_ARROW)){
-      player.x += player.speed;
+      player.x += playerSpeed;
     }
-    player.x = constrain(player.x, player.r, width - player.r);
-    if(frameCounter % 60 === 0){
-      var en = {
-        x: random(12, width-12),
-        y: -12,
-        r: 12,
-        vy: 2
-      };
-      enemies.push(en);
+    player.x = constrain(player.x, playerR, width - playerR);
+    if(shootCooldown > 0){
+      shootCooldown--;
     }
-    for(var bIndex = bullets.length-1;bIndex>=0;bIndex--){
-      var b = bullets[bIndex];
-      b.y -= 8;
-      if(b.y < -b.r){
-        bullets.splice(bIndex,1);
-        continue;
-      }
+    if(keyIsDown(32) && shootCooldown <= 0){
+      let b = {x:player.x, y:player.y - playerR - bulletR, r:bulletR, vy:-bulletSpeed};
+      bullets.push(b);
+      shootCooldown = 10;
     }
-    for(var eIndex = enemies.length-1;eIndex>=0;eIndex--){
-      var e = enemies[eIndex];
+    if(frameCount % 60 === 0){
+      let ex = random(enemyR, width - enemyR);
+      let e = {x:ex, y:-enemyR, r:enemyR, vy:enemySpeed};
+      enemies.push(e);
+    }
+    for(let i=enemies.length-1;i>=0;i--){
+      let e = enemies[i];
       e.y += e.vy;
-      if(e.y > height + e.r){
-        enemies.splice(eIndex,1);
-        continue;
+      if(e.y - e.r > height){
+        enemies.splice(i,1);
       }
     }
-    for(var ei = enemies.length-1; ei>=0; ei--){
-      var enemy = enemies[ei];
-      for(var bi = bullets.length-1; bi>=0; bi--){
-        var bullet = bullets[bi];
-        var dx = enemy.x - bullet.x;
-        var dy = enemy.y - bullet.y;
-        var dist = sqrt(dx*dx + dy*dy);
-        if(dist <= enemy.r + bullet.r){
-          score++;
-          for(var k=0;k<5;k++){
-            var p = {
-              x: enemy.x,
-              y: enemy.y,
-              r: 3,
-              life: 20,
-              dx: random(-2,2),
-              dy: random(-2,2)
-            };
-            particles.push(p);
+    for(let i=bullets.length-1;i>=0;i--){
+      let b = bullets[i];
+      b.y += b.vy;
+      if(b.y + b.r < 0){
+        bullets.splice(i,1);
+      }
+    }
+    for(let i=bullets.length-1;i>=0;i--){
+      let b = bullets[i];
+      for(let j=enemies.length-1;j>=0;j--){
+        let e = enemies[j];
+        let d = dist(b.x, b.y, e.x, e.y);
+        if(d <= b.r + e.r){
+          bullets.splice(i,1);
+          enemies.splice(j,1);
+          score += 10;
+          for(let k=0;k<explosionCountPerKill;k++){
+            let angle = random(0, TWO_PI);
+            let speed = random(1,3);
+            let p = {x:e.x, y:e.y, vx:cos(angle)*speed, vy:sin(angle)*speed, r:explosionR, life:explosionLife};
+            explosions.push(p);
           }
-          bullets.splice(bi,1);
-          enemies.splice(ei,1);
           break;
         }
       }
     }
-    for(var pi=particles.length-1;pi>=0;pi--){
-      var p = particles[pi];
-      p.x += p.dx;
-      p.y += p.dy;
-      p.life--;
+    for(let i=explosions.length-1;i>=0;i--){
+      let p = explosions[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 1;
       if(p.life <= 0){
-        particles.splice(pi,1);
+        explosions.splice(i,1);
       }
     }
-    for(var i=enemies.length-1;i>=0;i--){
-      var enm = enemies[i];
-      var dxp = enm.x - player.x;
-      var dyp = enm.y - player.y;
-      var dp = sqrt(dxp*dxp + dyp*dyp);
-      if(dp <= enm.r + player.r){
+    for(let i=enemies.length-1;i>=0;i--){
+      let e = enemies[i];
+      let d = dist(player.x, player.y, e.x, e.y);
+      if(d <= playerR + e.r){
         gameOver = true;
         break;
       }
     }
-  } else {
-    for(var pi2=particles.length-1;pi2>=0;pi2--){
-      var p2 = particles[pi2];
-      p2.x += p2.dx;
-      p2.y += p2.dy;
-      p2.life--;
-      if(p2.life <= 0){
-        particles.splice(pi2,1);
-      }
-    }
   }
-  fill(255);
-  for(var i=0;i<bullets.length;i++){
-    var bb = bullets[i];
-    ellipse(bb.x,bb.y,bb.r*2,bb.r*2);
+  fill(0,150,255);
+  noStroke();
+  ellipse(player.x, player.y, playerR*2, playerR*2);
+  fill(255,255,0);
+  for(let i=0;i<bullets.length;i++){
+    let b = bullets[i];
+    ellipse(b.x, b.y, b.r*2, b.r*2);
   }
-  fill(200,50,50);
-  for(var i=0;i<enemies.length;i++){
-    var ee = enemies[i];
-    ellipse(ee.x,ee.y,ee.r*2,ee.r*2);
+  fill(255,0,0);
+  for(let i=0;i<enemies.length;i++){
+    let e = enemies[i];
+    ellipse(e.x, e.y, e.r*2, e.r*2);
   }
-  fill(255,200,0);
-  ellipse(player.x,player.y,player.r*2,player.r*2);
-  for(var i=0;i<particles.length;i++){
-    var pp = particles[i];
-    var alpha = map(pp.life,0,20,0,255);
+  fill(255,150,0,200);
+  for(let i=0;i<explosions.length;i++){
+    let p = explosions[i];
+    let alpha = map(p.life,0,explosionLife,0,255);
     fill(255,150,0,alpha);
-    ellipse(pp.x,pp.y,pp.r*2,pp.r*2);
+    ellipse(p.x, p.y, p.r*2, p.r*2);
   }
   fill(255);
-  text("SCORE: " + score,8,8);
+  noStroke();
+  text("Score: "+score, 10, 10);
   if(gameOver){
-    fill(255,0,0);
     textSize(36);
-    textAlign(CENTER,CENTER);
-    text("GAME OVER", width/2, height/2);
-    textSize(18);
-    textAlign(LEFT,TOP);
-  }
-}
-function keyPressed(){
-  if(keyCode === 32 && !gameOver){
-    var bl = {
-      x: player.x,
-      y: player.y - player.r - 4,
-      r: 4
-    };
-    bullets.push(bl);
+    textAlign(CENTER, CENTER);
+    fill(255,0,0);
+    text("GAME OVER", width/2, height/2 - 20);
+    textSize(20);
+    fill(255);
+    text("Score: "+score, width/2, height/2 + 20);
+    textAlign(LEFT, TOP);
+    textSize(20);
   }
 }
