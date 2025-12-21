@@ -1,294 +1,171 @@
-let COLS = 10;
-let ROWS = 20;
-let CELL = 30;
-let DROP_INTERVAL = 30;
-let grid = null;
-let pieces = null;
-let colors = null;
-let currentPiece = null;
-let frameCounter = 0;
+let canvasWidth = 400;
+let canvasHeight = 600;
+let paddleWidth = 90;
+let paddleHeight = 12;
+let paddleX = 0;
+let paddleY = 0;
+let ball = {};
+let blocks = [];
+let particles = [];
+let rows = 6;
+let cols = 7;
+let blockW = 52;
+let blockH = 20;
+let blockGap = 6;
+let topOffset = 60;
 let score = 0;
 let gameOver = false;
-function createEmptyGrid() {
-  let g = [];
-  for (let r = 0; r < ROWS; r++) {
-    let row = [];
-    for (let c = 0; c < COLS; c++) {
-      row.push(0);
-    }
-    g.push(row);
-  }
-  return g;
-}
-function deepCopyMatrix(m) {
-  let out = [];
-  for (let r = 0; r < 4; r++) {
-    let row = [];
-    for (let c = 0; c < 4; c++) {
-      row.push(m[r][c]);
-    }
-    out.push(row);
-  }
-  return out;
-}
-function rotateMatrix(m) {
-  let out = [
-    [0,0,0,0],
-    [0,0,0,0],
-    [0,0,0,0],
-    [0,0,0,0]
-  ];
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
-      out[c][3 - r] = m[r][c];
+let rowColors = [];
+let prevBallX = 0;
+let prevBallY = 0;
+function setup() {
+  createCanvas(canvasWidth, canvasHeight);
+  paddleY = height - 40;
+  paddleX = width / 2;
+  ball.x = width / 2;
+  ball.y = paddleY - 6 - 1;
+  ball.r = 6;
+  ball.vx = 4;
+  ball.vy = -5;
+  for (let i = 0; i < rows; i++) {
+    if (i === 0) {
+      rowColors[i] = color(255, 80, 80);
+    } else if (i === 1) {
+      rowColors[i] = color(255, 160, 80);
+    } else if (i === 2) {
+      rowColors[i] = color(255, 220, 80);
+    } else if (i === 3) {
+      rowColors[i] = color(120, 200, 120);
+    } else if (i === 4) {
+      rowColors[i] = color(100, 160, 240);
+    } else {
+      rowColors[i] = color(180, 120, 220);
     }
   }
-  return out;
+  let totalBlockAreaW = cols * blockW + (cols - 1) * blockGap;
+  let startX = Math.floor((width - totalBlockAreaW) / 2);
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      let bx = startX + c * (blockW + blockGap);
+      let by = topOffset + r * (blockH + 6);
+      let b = {
+        x: bx,
+        y: by,
+        w: blockW,
+        h: blockH,
+        col: rowColors[r]
+      };
+      blocks.push(b);
+    }
+  }
+  textAlign(LEFT, TOP);
+  textSize(16);
 }
-function canPlaceMatrixAt(mat, px, py) {
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
-      if (mat[r][c]) {
-        let gx = px + c;
-        let gy = py + r;
-        if (gx < 0 || gx >= COLS) {
-          return false;
-        }
-        if (gy >= ROWS) {
-          return false;
-        }
-        if (gy >= 0) {
-          if (grid[gy][gx] !== 0) {
-            return false;
-          }
-        }
+function draw() {
+  background(30);
+  fill(255);
+  noStroke();
+  text('Score: ' + score, 8, 8);
+  for (let i = 0; i < blocks.length; i++) {
+    fill(blocks[i].col);
+    rect(blocks[i].x, blocks[i].y, blocks[i].w, blocks[i].h, 4);
+  }
+  paddleX = constrain(mouseX, paddleWidth / 2, width - paddleWidth / 2);
+  fill(200);
+  rectMode(CENTER);
+  rect(paddleX, paddleY, paddleWidth, paddleHeight, 6);
+  rectMode(CORNER);
+  fill(255);
+  ellipse(ball.x, ball.y, ball.r * 2, ball.r * 2);
+  for (let i = particles.length - 1; i >= 0; i--) {
+    let p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= 1;
+    let alpha = map(p.life, 0, 15, 0, 255);
+    alpha = constrain(alpha, 0, 255);
+    fill(255, alpha);
+    noStroke();
+    ellipse(p.x, p.y, 4, 4);
+    if (p.life <= 0) {
+      particles.splice(i, 1);
+    }
+  }
+  if (!gameOver) {
+    prevBallX = ball.x;
+    prevBallY = ball.y;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+    if (ball.x - ball.r <= 0) {
+      ball.x = ball.r;
+      ball.vx = abs(ball.vx);
+    } else if (ball.x + ball.r >= width) {
+      ball.x = width - ball.r;
+      ball.vx = -abs(ball.vx);
+    }
+    if (ball.y - ball.r <= 0) {
+      ball.y = ball.r;
+      ball.vy = abs(ball.vy);
+    }
+    if (ball.y - ball.r > height) {
+      gameOver = true;
+    }
+    if (ball.vy > 0) {
+      let closestX = constrain(ball.x, paddleX - paddleWidth / 2, paddleX + paddleWidth / 2);
+      let closestY = constrain(ball.y, paddleY - paddleHeight / 2, paddleY + paddleHeight / 2);
+      let dx = ball.x - closestX;
+      let dy = ball.y - closestY;
+      if (dx * dx + dy * dy <= ball.r * ball.r) {
+        let rel = (ball.x - paddleX) / (paddleWidth / 2);
+        rel = constrain(rel, -1, 1);
+        let angle = rel * (PI / 3);
+        let speed = sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+        ball.vx = speed * sin(angle);
+        ball.vy = -abs(speed * cos(angle));
+        ball.y = paddleY - paddleHeight / 2 - ball.r - 0.1;
       }
     }
-  }
-  return true;
-}
-function lockCurrentPiece() {
-  let mat = currentPiece.matrix;
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
-      if (mat[r][c]) {
-        let gx = currentPiece.x + c;
-        let gy = currentPiece.y + r;
-        if (gy >= 0 && gy < ROWS && gx >= 0 && gx < COLS) {
-          grid[gy][gx] = currentPiece.id + 1;
+    for (let i = blocks.length - 1; i >= 0; i--) {
+      let b = blocks[i];
+      let closestX = constrain(ball.x, b.x, b.x + b.w);
+      let closestY = constrain(ball.y, b.y, b.y + b.h);
+      let dx = ball.x - closestX;
+      let dy = ball.y - closestY;
+      if (dx * dx + dy * dy <= ball.r * ball.r) {
+        score += 10;
+        for (let k = 0; k < 3; k++) {
+          let p = {
+            x: ball.x,
+            y: ball.y,
+            vx: random(-2, 2),
+            vy: random(-2, 2),
+            life: 15
+          };
+          particles.push(p);
         }
-      }
-    }
-  }
-  clearLines();
-  spawnPiece();
-}
-function clearLines() {
-  for (let r = ROWS - 1; r >= 0; r--) {
-    let full = true;
-    for (let c = 0; c < COLS; c++) {
-      if (grid[r][c] === 0) {
-        full = false;
+        let collidedVertically = false;
+        if (prevBallY + ball.r <= b.y) {
+          collidedVertically = true;
+        } else if (prevBallY - ball.r >= b.y + b.h) {
+          collidedVertically = true;
+        }
+        if (collidedVertically) {
+          ball.vy = -ball.vy;
+        } else {
+          ball.vx = -ball.vx;
+        }
+        blocks.splice(i, 1);
         break;
       }
     }
-    if (full) {
-      grid.splice(r, 1);
-      let newRow = [];
-      for (let i = 0; i < COLS; i++) {
-        newRow.push(0);
-      }
-      grid.unshift(newRow);
-      score += 100;
-      r++;
-    }
-  }
-}
-function spawnPiece() {
-  let id = Math.floor(Math.random() * pieces.length);
-  let mat = deepCopyMatrix(pieces[id]);
-  let px = Math.floor(COLS / 2) - 2;
-  let py = -1;
-  let piece = {
-    id: id,
-    matrix: mat,
-    x: px,
-    y: py
-  };
-  currentPiece = piece;
-  if (!canPlaceMatrixAt(currentPiece.matrix, currentPiece.x, currentPiece.y)) {
-    gameOver = true;
-  }
-}
-function moveCurrent(dx) {
-  if (gameOver) {
-    return;
-  }
-  let nx = currentPiece.x + dx;
-  if (canPlaceMatrixAt(currentPiece.matrix, nx, currentPiece.y)) {
-    currentPiece.x = nx;
-  }
-}
-function rotateCurrent() {
-  if (gameOver) {
-    return;
-  }
-  let rotated = rotateMatrix(currentPiece.matrix);
-  if (canPlaceMatrixAt(rotated, currentPiece.x, currentPiece.y)) {
-    currentPiece.matrix = rotated;
-  }
-}
-function stepDown() {
-  if (gameOver) {
-    return;
-  }
-  if (canPlaceMatrixAt(currentPiece.matrix, currentPiece.x, currentPiece.y + 1)) {
-    currentPiece.y += 1;
   } else {
-    lockCurrentPiece();
-  }
-}
-function setupPiecesAndColors() {
-  pieces = [
-    [
-      [0,0,0,0],
-      [1,1,1,1],
-      [0,0,0,0],
-      [0,0,0,0]
-    ],
-    [
-      [0,1,1,0],
-      [0,1,1,0],
-      [0,0,0,0],
-      [0,0,0,0]
-    ],
-    [
-      [0,1,0,0],
-      [1,1,1,0],
-      [0,0,0,0],
-      [0,0,0,0]
-    ],
-    [
-      [0,0,1,0],
-      [1,1,1,0],
-      [0,0,0,0],
-      [0,0,0,0]
-    ],
-    [
-      [1,0,0,0],
-      [1,1,1,0],
-      [0,0,0,0],
-      [0,0,0,0]
-    ],
-    [
-      [0,1,1,0],
-      [1,1,0,0],
-      [0,0,0,0],
-      [0,0,0,0]
-    ],
-    [
-      [1,1,0,0],
-      [0,1,1,0],
-      [0,0,0,0],
-      [0,0,0,0]
-    ]
-  ];
-  colors = [];
-  colors.push(color(0, 255, 255));
-  colors.push(color(255, 255, 0));
-  colors.push(color(128, 0, 128));
-  colors.push(color(255, 165, 0));
-  colors.push(color(0, 0, 255));
-  colors.push(color(0, 255, 0));
-  colors.push(color(255, 0, 0));
-}
-function drawGrid() {
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      let val = grid[r][c];
-      stroke(50);
-      if (val === 0) {
-        fill(30);
-      } else {
-        let colIndex = constrain(val - 1, 0, colors.length - 1);
-        fill(colors[colIndex]);
-      }
-      rect(c * CELL, r * CELL, CELL, CELL);
-    }
-  }
-}
-function drawCurrentPiece() {
-  if (!currentPiece) {
-    return;
-  }
-  let mat = currentPiece.matrix;
-  let col = currentPiece.id;
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
-      if (mat[r][c]) {
-        let gx = currentPiece.x + c;
-        let gy = currentPiece.y + r;
-        if (gy >= 0) {
-          if (col >= 0 && col < colors.length) {
-            fill(colors[col]);
-          } else {
-            fill(200);
-          }
-          stroke(50);
-          rect(gx * CELL, gy * CELL, CELL, CELL);
-        }
-      }
-    }
-  }
-}
-function keyPressed() {
-  if (gameOver) {
-    return;
-  }
-  if (keyCode === LEFT_ARROW) {
-    moveCurrent(-1);
-  } else if (keyCode === RIGHT_ARROW) {
-    moveCurrent(1);
-  } else if (keyCode === UP_ARROW) {
-    rotateCurrent();
-  } else if (keyCode === DOWN_ARROW) {
-    stepDown();
-  }
-}
-function setup() {
-  createCanvas(COLS * CELL, ROWS * CELL);
-  grid = createEmptyGrid();
-  setupPiecesAndColors();
-  score = 0;
-  frameCounter = 0;
-  gameOver = false;
-  spawnPiece();
-}
-function draw() {
-  background(20);
-  if (!gameOver) {
-    frameCounter++;
-    let interval = DROP_INTERVAL;
-    if (keyIsDown(DOWN_ARROW)) {
-      interval = 2;
-    }
-    if (frameCounter % interval === 0) {
-      stepDown();
-    }
-  }
-  drawGrid();
-  drawCurrentPiece();
-  fill(255);
-  noStroke();
-  textSize(16);
-  textAlign(LEFT, TOP);
-  text("Score: " + score, 5, 5);
-  if (gameOver) {
-    fill(0, 180);
-    rect(0, height / 2 - 30, width, 60);
-    fill(255);
-    textSize(24);
     textAlign(CENTER, CENTER);
-    text("Game Over", width / 2, height / 2);
+    textSize(32);
+    fill(255, 200, 200);
+    text('GAME OVER', width / 2, height / 2 - 20);
+    textSize(16);
+    fill(220);
+    text('Final Score: ' + score, width / 2, height / 2 + 18);
+    textAlign(LEFT, TOP);
   }
 }
