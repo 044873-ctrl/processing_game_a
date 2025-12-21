@@ -1,193 +1,273 @@
-let canvasW = 400;
-let canvasH = 600;
-let paddleW = 90;
-let paddleH = 12;
-let paddleY;
-let ball = {};
-let cols = 7;
-let rows = 12;
-let blocks = [];
-let blockGap = 4;
-let blockOffsetLeft = 10;
-let blockOffsetTop = 40;
-let blockW = 0;
-let blockH = 16;
-let colorsByRow = [];
-let particles = [];
+let cols = 10;
+let rows = 20;
+let cell = 30;
+let grid = [];
+let pieces = [];
+let colors = [];
+let currentPiece = null;
+let currentX = 0;
+let currentY = 0;
+let framesSinceLastDrop = 0;
+let baseDropInterval = 30;
 let score = 0;
 let gameOver = false;
-function setup() {
-  createCanvas(canvasW, canvasH);
-  rectMode(CORNER);
-  ellipseMode(RADIUS);
-  textAlign(LEFT, TOP);
-  paddleY = height - 40;
-  blockW = (width - blockOffsetLeft * 2 - (cols - 1) * blockGap) / cols;
+function createEmptyGrid() {
+  let g = [];
   for (let r = 0; r < rows; r++) {
-    let hue = map(r, 0, rows - 1, 0, 360);
-    colorsByRow[r] = color(hue, 80, 90);
-  }
-  colorMode(HSB, 360, 100, 100, 1);
-  for (let r = 0; r < rows; r++) {
+    let row = [];
     for (let c = 0; c < cols; c++) {
-      let bx = blockOffsetLeft + c * (blockW + blockGap);
-      let by = blockOffsetTop + r * (blockH + blockGap);
-      let b = { x: bx, y: by, w: blockW, h: blockH, row: r };
-      blocks.push(b);
+      row.push(0);
+    }
+    g.push(row);
+  }
+  return g;
+}
+function deepCopyShape(shape) {
+  let s = [];
+  for (let r = 0; r < 4; r++) {
+    let row = [];
+    for (let c = 0; c < 4; c++) {
+      row.push(shape[r][c]);
+    }
+    s.push(row);
+  }
+  return s;
+}
+function rotateMatrix(shape) {
+  let n = 4;
+  let res = [];
+  for (let r = 0; r < n; r++) {
+    let row = [];
+    for (let c = 0; c < n; c++) {
+      row.push(0);
+    }
+    res.push(row);
+  }
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      res[r][c] = shape[n - 1 - c][r];
     }
   }
-  ball.x = width / 2;
-  ball.y = paddleY - 20;
-  ball.r = 6;
-  ball.vx = 4;
-  ball.vy = -5;
-  score = 0;
-  gameOver = false;
-  particles = [];
+  return res;
 }
-function draw() {
-  background(0);
-  drawBlocks();
-  updateAndDrawParticles();
-  let paddleX = constrain(mouseX, paddleW / 2, width - paddleW / 2);
-  fill(200, 10, 95);
-  noStroke();
-  rect(paddleX - paddleW / 2, paddleY, paddleW, paddleH, 2);
-  if (!gameOver) {
-    updateBall(paddleX);
-  }
-  fill(0, 0, 100);
-  ellipse(ball.x, ball.y, ball.r, ball.r);
-  fill(0, 0, 100);
-  textSize(18);
-  textAlign(LEFT, TOP);
-  text("Score: " + score, 8, 8);
-  if (gameOver) {
-    textSize(36);
-    textAlign(CENTER, CENTER);
-    text("GAME OVER", width / 2, height / 2 - 20);
-    textSize(18);
-    text("Score: " + score, width / 2, height / 2 + 20);
-  }
-}
-function drawBlocks() {
-  for (let i = 0; i < blocks.length; i++) {
-    let b = blocks[i];
-    fill(colorsByRow[b.row]);
-    rect(b.x, b.y, b.w, b.h);
-  }
-}
-function updateBall(paddleX) {
-  ball.x += ball.vx;
-  ball.y += ball.vy;
-  if (ball.x - ball.r <= 0) {
-    ball.x = ball.r;
-    ball.vx = abs(ball.vx);
-  }
-  if (ball.x + ball.r >= width) {
-    ball.x = width - ball.r;
-    ball.vx = -abs(ball.vx);
-  }
-  if (ball.y - ball.r <= 0) {
-    ball.y = ball.r;
-    ball.vy = abs(ball.vy);
-  }
-  if (ball.y - ball.r > height) {
-    gameOver = true;
-  }
-  handlePaddleCollision(paddleX);
-  handleBlockCollisions();
-}
-function handlePaddleCollision(paddleX) {
-  let px = paddleX - paddleW / 2;
-  let py = paddleY;
-  if (ball.x + ball.r >= px && ball.x - ball.r <= px + paddleW && ball.y + ball.r >= py && ball.y - ball.r <= py + paddleH && ball.vy > 0) {
-    let paddleCenter = px + paddleW / 2;
-    let relative = (ball.x - paddleCenter) / (paddleW / 2);
-    if (relative < -1) {
-      relative = -1;
-    } else if (relative > 1) {
-      relative = 1;
-    }
-    let maxAngle = PI / 3;
-    let angle = relative * maxAngle;
-    let speed = sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
-    ball.vx = speed * sin(angle);
-    ball.vy = -abs(speed * cos(angle));
-    ball.y = py - ball.r - 0.1;
-  }
-}
-function handleBlockCollisions() {
-  for (let i = blocks.length - 1; i >= 0; i--) {
-    let b = blocks[i];
-    let closestX = clamp(ball.x, b.x, b.x + b.w);
-    let closestY = clamp(ball.y, b.y, b.y + b.h);
-    let dx = ball.x - closestX;
-    let dy = ball.y - closestY;
-    let dist2 = dx * dx + dy * dy;
-    if (dist2 <= ball.r * ball.r) {
-      if (abs(dx) > abs(dy)) {
-        if (dx > 0) {
-          ball.x = closestX + ball.r + 0.1;
-          ball.vx = abs(ball.vx);
-        } else {
-          ball.x = closestX - ball.r - 0.1;
-          ball.vx = -abs(ball.vx);
+function collides(shape, x, y) {
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      if (shape[r][c] === 1) {
+        let gx = x + c;
+        let gy = y + r;
+        if (gx < 0 || gx >= cols || gy >= rows) {
+          return true;
         }
-      } else {
-        if (dy > 0) {
-          ball.y = closestY + ball.r + 0.1;
-          ball.vy = abs(ball.vy);
-        } else {
-          ball.y = closestY - ball.r - 0.1;
-          ball.vy = -abs(ball.vy);
+        if (gy >= 0) {
+          if (grid[gy][gx] !== 0) {
+            return true;
+          }
         }
       }
-      spawnParticles(b.x + b.w / 2, b.y + b.h / 2, colorsByRow[b.row]);
-      blocks.splice(i, 1);
-      score += 10;
+    }
+  }
+  return false;
+}
+function spawnPiece() {
+  let idx = Math.floor(Math.random() * pieces.length);
+  currentPiece = deepCopyShape(pieces[idx]);
+  currentX = Math.floor((cols - 4) / 2);
+  currentY = -1;
+  let colorIndex = idx + 1;
+  currentPiece.color = colorIndex;
+  if (collides(currentPiece, currentX, currentY)) {
+    gameOver = true;
+  }
+}
+function lockPiece() {
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      if (currentPiece[r][c] === 1) {
+        let gx = currentX + c;
+        let gy = currentY + r;
+        if (gy >= 0 && gy < rows && gx >= 0 && gx < cols) {
+          grid[gy][gx] = currentPiece.color;
+        }
+      }
+    }
+  }
+  clearLines();
+  spawnPiece();
+}
+function clearLines() {
+  for (let r = rows - 1; r >= 0; r--) {
+    let full = true;
+    for (let c = 0; c < cols; c++) {
+      if (grid[r][c] === 0) {
+        full = false;
+        break;
+      }
+    }
+    if (full) {
+      grid.splice(r, 1);
+      let newRow = [];
+      for (let c = 0; c < cols; c++) {
+        newRow.push(0);
+      }
+      grid.unshift(newRow);
+      score += 100;
+      r++;
     }
   }
 }
-function spawnParticles(x, y, col) {
-  for (let i = 0; i < 3; i++) {
-    let angle = random(0, TWO_PI);
-    let speed = random(1, 3);
-    let p = {
-      x: x,
-      y: y,
-      vx: cos(angle) * speed,
-      vy: sin(angle) * speed,
-      life: 15,
-      color: col
-    };
-    particles.push(p);
+function tryMove(dx, dy) {
+  let nx = currentX + dx;
+  let ny = currentY + dy;
+  if (!collides(currentPiece, nx, ny)) {
+    currentX = nx;
+    currentY = ny;
+    return true;
   }
+  return false;
 }
-function updateAndDrawParticles() {
-  for (let i = particles.length - 1; i >= 0; i--) {
-    let p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.life -= 1;
-    let alpha = p.life / 15;
-    if (alpha < 0) {
-      alpha = 0;
-    }
-    fill(hue(p.color), saturation(p.color), brightness(p.color), alpha);
-    noStroke();
-    ellipse(p.x, p.y, 3, 3);
-    if (p.life <= 0) {
-      particles.splice(i, 1);
+function drawGrid() {
+  stroke(40);
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      let val = grid[r][c];
+      if (val === 0) {
+        fill(20);
+      } else {
+        let colArr = colors[val];
+        fill(colArr[0], colArr[1], colArr[2]);
+      }
+      rect(c * cell, r * cell, cell, cell);
     }
   }
 }
-function clamp(v, a, b) {
-  if (v < a) {
-    return a;
+function drawPiece() {
+  if (currentPiece === null) {
+    return;
   }
-  if (v > b) {
-    return b;
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      if (currentPiece[r][c] === 1) {
+        let gx = currentX + c;
+        let gy = currentY + r;
+        if (gy >= 0) {
+          let colArr = colors[currentPiece.color];
+          fill(colArr[0], colArr[1], colArr[2]);
+          rect(gx * cell, gy * cell, cell, cell);
+        }
+      }
+    }
   }
-  return v;
+}
+function setupPiecesAndColors() {
+  pieces = [];
+  pieces.push([
+    [0,0,0,0],
+    [1,1,1,1],
+    [0,0,0,0],
+    [0,0,0,0]
+  ]);
+  pieces.push([
+    [0,1,1,0],
+    [0,1,1,0],
+    [0,0,0,0],
+    [0,0,0,0]
+  ]);
+  pieces.push([
+    [0,1,0,0],
+    [1,1,1,0],
+    [0,0,0,0],
+    [0,0,0,0]
+  ]);
+  pieces.push([
+    [0,0,1,0],
+    [1,1,1,0],
+    [0,0,0,0],
+    [0,0,0,0]
+  ]);
+  pieces.push([
+    [1,0,0,0],
+    [1,1,1,0],
+    [0,0,0,0],
+    [0,0,0,0]
+  ]);
+  pieces.push([
+    [0,1,1,0],
+    [1,1,0,0],
+    [0,0,0,0],
+    [0,0,0,0]
+  ]);
+  pieces.push([
+    [1,1,0,0],
+    [0,1,1,0],
+    [0,0,0,0],
+    [0,0,0,0]
+  ]);
+  colors = [];
+  colors.push([0,0,0]);
+  colors.push([0,255,255]);
+  colors.push([255,255,0]);
+  colors.push([128,0,128]);
+  colors.push([255,165,0]);
+  colors.push([0,0,255]);
+  colors.push([0,255,0]);
+  colors.push([255,0,0]);
+}
+function setup() {
+  createCanvas(cols * cell, rows * cell);
+  setupPiecesAndColors();
+  grid = createEmptyGrid();
+  spawnPiece();
+  textAlign(LEFT, TOP);
+  textSize(16);
+  noStroke();
+}
+function draw() {
+  background(10);
+  if (!gameOver) {
+    let dropInterval = baseDropInterval;
+    if (keyIsDown(DOWN_ARROW)) {
+      dropInterval = 2;
+    }
+    framesSinceLastDrop++;
+    if (framesSinceLastDrop >= dropInterval) {
+      framesSinceLastDrop = 0;
+      if (!tryMove(0,1)) {
+        lockPiece();
+        if (gameOver) {
+          framesSinceLastDrop = 0;
+        }
+      }
+    }
+  }
+  stroke(40);
+  drawGrid();
+  drawPiece();
+  fill(255);
+  text("Score: " + score, 5, 5);
+  if (gameOver) {
+    fill(200, 50, 50);
+    textSize(32);
+    textAlign(CENTER, CENTER);
+    text("GAME OVER", width / 2, height / 2);
+  }
+}
+function keyPressed() {
+  if (gameOver) {
+    return;
+  }
+  if (keyCode === LEFT_ARROW) {
+    tryMove(-1,0);
+  } else if (keyCode === RIGHT_ARROW) {
+    tryMove(1,0);
+  } else if (keyCode === DOWN_ARROW) {
+    tryMove(0,1);
+  } else if (keyCode === UP_ARROW) {
+    let rotated = rotateMatrix(currentPiece);
+    let prev = currentPiece;
+    currentPiece = rotated;
+    if (collides(currentPiece, currentX, currentY)) {
+      currentPiece = prev;
+    }
+  }
 }
