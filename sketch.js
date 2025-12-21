@@ -1,254 +1,175 @@
-let grid;
-let sizeGrid;
-let tileSize;
-let score;
-let gameOver;
-function initGrid(){
-  grid = [];
-  for(let y=0;y<4;y++){
-    let row = [];
-    for(let x=0;x<4;x++){
-      row.push(0);
-    }
-    grid.push(row);
-  }
-}
-function getEmptyCells(){
-  let empties = [];
-  for(let y=0;y<4;y++){
-    for(let x=0;x<4;x++){
-      if(grid[y][x]===0){
-        empties.push({x:x,y:y});
-      }
-    }
-  }
-  return empties;
-}
-function addRandomTwo(){
-  let empties = getEmptyCells();
-  if(empties.length===0){
-    return;
-  }
-  let idx = Math.floor(Math.random()*empties.length);
-  let cell = empties[idx];
-  grid[cell.y][cell.x]=2;
-}
-function rowsEqual(a,b){
-  for(let i=0;i<4;i++){
-    if(a[i]!==b[i]){return false;}
-  }
-  return true;
-}
-function moveLeft(){
-  let moved=false;
-  for(let y=0;y<4;y++){
-    let orig = [grid[y][0],grid[y][1],grid[y][2],grid[y][3]];
-    let arr = [];
-    for(let x=0;x<4;x++){
-      if(orig[x]!==0){arr.push(orig[x]);}
-    }
-    let merged = [];
-    let i=0;
-    while(i<arr.length){
-      if(i+1<arr.length && arr[i]===arr[i+1]){
-        let val = arr[i]*2;
-        score+=val;
-        merged.push(val);
-        i+=2;
-      } else {
-        merged.push(arr[i]);
-        i+=1;
-      }
-    }
-    while(merged.length<4){merged.push(0);}
-    for(let x=0;x<4;x++){
-      grid[y][x]=merged[x];
-    }
-    if(!rowsEqual(orig,merged)){moved=true;}
-  }
-  return moved;
-}
-function moveRight(){
-  let moved=false;
-  for(let y=0;y<4;y++){
-    let orig = [grid[y][0],grid[y][1],grid[y][2],grid[y][3]];
-    let arr = [];
-    for(let x=3;x>=0;x--){
-      if(orig[x]!==0){arr.push(orig[x]);}
-    }
-    let merged = [];
-    let i=0;
-    while(i<arr.length){
-      if(i+1<arr.length && arr[i]===arr[i+1]){
-        let val = arr[i]*2;
-        score+=val;
-        merged.push(val);
-        i+=2;
-      } else {
-        merged.push(arr[i]);
-        i+=1;
-      }
-    }
-    while(merged.length<4){merged.push(0);}
-    for(let x=3,idx=0;x>=0;x--,idx++){
-      grid[y][x]=merged[idx];
-    }
-    let newRow = [grid[y][0],grid[y][1],grid[y][2],grid[y][3]];
-    if(!rowsEqual(orig,newRow)){moved=true;}
-  }
-  return moved;
-}
-function moveUp(){
-  let moved=false;
-  for(let x=0;x<4;x++){
-    let orig = [grid[0][x],grid[1][x],grid[2][x],grid[3][x]];
-    let arr = [];
-    for(let y=0;y<4;y++){
-      if(orig[y]!==0){arr.push(orig[y]);}
-    }
-    let merged = [];
-    let i=0;
-    while(i<arr.length){
-      if(i+1<arr.length && arr[i]===arr[i+1]){
-        let val = arr[i]*2;
-        score+=val;
-        merged.push(val);
-        i+=2;
-      } else {
-        merged.push(arr[i]);
-        i+=1;
-      }
-    }
-    while(merged.length<4){merged.push(0);}
-    for(let y=0;y<4;y++){
-      grid[y][x]=merged[y];
-    }
-    let newCol = [grid[0][x],grid[1][x],grid[2][x],grid[3][x]];
-    if(!rowsEqual(orig,newCol)){moved=true;}
-  }
-  return moved;
-}
-function moveDown(){
-  let moved=false;
-  for(let x=0;x<4;x++){
-    let orig = [grid[0][x],grid[1][x],grid[2][x],grid[3][x]];
-    let arr = [];
-    for(let y=3;y>=0;y--){
-      if(orig[y]!==0){arr.push(orig[y]);}
-    }
-    let merged = [];
-    let i=0;
-    while(i<arr.length){
-      if(i+1<arr.length && arr[i]===arr[i+1]){
-        let val = arr[i]*2;
-        score+=val;
-        merged.push(val);
-        i+=2;
-      } else {
-        merged.push(arr[i]);
-        i+=1;
-      }
-    }
-    while(merged.length<4){merged.push(0);}
-    for(let y=3,idx=0;y>=0;y--,idx++){
-      grid[y][x]=merged[idx];
-    }
-    let newCol = [grid[0][x],grid[1][x],grid[2][x],grid[3][x]];
-    if(!rowsEqual(orig,newCol)){moved=true;}
-  }
-  return moved;
-}
-function canMove(){
-  for(let y=0;y<4;y++){
-    for(let x=0;x<4;x++){
-      if(grid[y][x]===0){return true;}
-    }
-  }
-  for(let y=0;y<4;y++){
-    for(let x=0;x<3;x++){
-      if(grid[y][x]===grid[y][x+1]){return true;}
-    }
-  }
-  for(let x=0;x<4;x++){
-    for(let y=0;y<3;y++){
-      if(grid[y][x]===grid[y+1][x]){return true;}
-    }
-  }
-  return false;
-}
+var player = {};
+var bullets = [];
+var enemies = [];
+var particles = [];
+var stars = [];
+var score = 0;
+var gameOver = false;
+var frameCounter = 0;
 function setup(){
-  createCanvas(400,400);
-  sizeGrid = 4;
-  tileSize = 100;
+  createCanvas(400,600);
+  player.x = width/2;
+  player.y = height - 30;
+  player.r = 12;
+  player.speed = 5;
+  bullets = [];
+  enemies = [];
+  particles = [];
+  stars = [];
   score = 0;
   gameOver = false;
-  initGrid();
-  addRandomTwo();
-  addRandomTwo();
-  textAlign(CENTER,CENTER);
-  textSize(32);
+  frameCounter = 0;
+  for(var i=0;i<30;i++){
+    var s = {
+      x: random(0,width),
+      y: random(0,height),
+      r: random(1,3),
+      speed: random(0.5,2)
+    };
+    stars.push(s);
+  }
+  textSize(18);
+  textAlign(LEFT,TOP);
+  noStroke();
 }
 function draw(){
-  background(250);
-  stroke(200);
-  for(let y=0;y<4;y++){
-    for(let x=0;x<4;x++){
-      let val = grid[y][x];
-      if(val===0){
-        fill(230);
-      } else {
-        let hue = 200 - Math.min(180, Math.log2(val)*20);
-        fill(hue,100,200);
+  background(0);
+  for(var si=0;si<stars.length;si++){
+    var st = stars[si];
+    fill(255);
+    ellipse(st.x,st.y,st.r,st.r);
+    st.y += st.speed;
+    if(st.y > height){
+      st.y = 0;
+      st.x = random(0,width);
+    }
+  }
+  frameCounter++;
+  if(!gameOver){
+    if(keyIsDown(LEFT_ARROW)){
+      player.x -= player.speed;
+    }
+    if(keyIsDown(RIGHT_ARROW)){
+      player.x += player.speed;
+    }
+    player.x = constrain(player.x, player.r, width - player.r);
+    if(frameCounter % 60 === 0){
+      var en = {
+        x: random(12, width-12),
+        y: -12,
+        r: 12,
+        vy: 2
+      };
+      enemies.push(en);
+    }
+    for(var bIndex = bullets.length-1;bIndex>=0;bIndex--){
+      var b = bullets[bIndex];
+      b.y -= 8;
+      if(b.y < -b.r){
+        bullets.splice(bIndex,1);
+        continue;
       }
-      rect(x*tileSize,y*tileSize,tileSize-4,tileSize-4,8);
-      if(val!==0){
-        fill(0);
-        text(String(val),x*tileSize+tileSize/2,y*tileSize+tileSize/2);
+    }
+    for(var eIndex = enemies.length-1;eIndex>=0;eIndex--){
+      var e = enemies[eIndex];
+      e.y += e.vy;
+      if(e.y > height + e.r){
+        enemies.splice(eIndex,1);
+        continue;
+      }
+    }
+    for(var ei = enemies.length-1; ei>=0; ei--){
+      var enemy = enemies[ei];
+      for(var bi = bullets.length-1; bi>=0; bi--){
+        var bullet = bullets[bi];
+        var dx = enemy.x - bullet.x;
+        var dy = enemy.y - bullet.y;
+        var dist = sqrt(dx*dx + dy*dy);
+        if(dist <= enemy.r + bullet.r){
+          score++;
+          for(var k=0;k<5;k++){
+            var p = {
+              x: enemy.x,
+              y: enemy.y,
+              r: 3,
+              life: 20,
+              dx: random(-2,2),
+              dy: random(-2,2)
+            };
+            particles.push(p);
+          }
+          bullets.splice(bi,1);
+          enemies.splice(ei,1);
+          break;
+        }
+      }
+    }
+    for(var pi=particles.length-1;pi>=0;pi--){
+      var p = particles[pi];
+      p.x += p.dx;
+      p.y += p.dy;
+      p.life--;
+      if(p.life <= 0){
+        particles.splice(pi,1);
+      }
+    }
+    for(var i=enemies.length-1;i>=0;i--){
+      var enm = enemies[i];
+      var dxp = enm.x - player.x;
+      var dyp = enm.y - player.y;
+      var dp = sqrt(dxp*dxp + dyp*dyp);
+      if(dp <= enm.r + player.r){
+        gameOver = true;
+        break;
+      }
+    }
+  } else {
+    for(var pi2=particles.length-1;pi2>=0;pi2--){
+      var p2 = particles[pi2];
+      p2.x += p2.dx;
+      p2.y += p2.dy;
+      p2.life--;
+      if(p2.life <= 0){
+        particles.splice(pi2,1);
       }
     }
   }
-  fill(0);
-  textSize(16);
-  text("Score: "+String(score),200,380);
-  if(!gameOver && !canMove()){
-    gameOver = true;
+  fill(255);
+  for(var i=0;i<bullets.length;i++){
+    var bb = bullets[i];
+    ellipse(bb.x,bb.y,bb.r*2,bb.r*2);
   }
+  fill(200,50,50);
+  for(var i=0;i<enemies.length;i++){
+    var ee = enemies[i];
+    ellipse(ee.x,ee.y,ee.r*2,ee.r*2);
+  }
+  fill(255,200,0);
+  ellipse(player.x,player.y,player.r*2,player.r*2);
+  for(var i=0;i<particles.length;i++){
+    var pp = particles[i];
+    var alpha = map(pp.life,0,20,0,255);
+    fill(255,150,0,alpha);
+    ellipse(pp.x,pp.y,pp.r*2,pp.r*2);
+  }
+  fill(255);
+  text("SCORE: " + score,8,8);
   if(gameOver){
-    fill(255,240,240,220);
-    rect(0,0,width,height);
-    fill(0);
-    textSize(32);
-    text("Game Over",200,180);
-    textSize(20);
-    text("Score: "+String(score),200,220);
-    textSize(14);
-    text("Press R to restart",200,250);
+    fill(255,0,0);
+    textSize(36);
+    textAlign(CENTER,CENTER);
+    text("GAME OVER", width/2, height/2);
+    textSize(18);
+    textAlign(LEFT,TOP);
   }
 }
 function keyPressed(){
-  if(keyCode===82){
-    initGrid();
-    addRandomTwo();
-    addRandomTwo();
-    score = 0;
-    gameOver = false;
-    return;
-  }
-  if(gameOver){return;}
-  let moved=false;
-  if(keyCode===LEFT_ARROW){
-    moved = moveLeft();
-  } else if(keyCode===RIGHT_ARROW){
-    moved = moveRight();
-  } else if(keyCode===UP_ARROW){
-    moved = moveUp();
-  } else if(keyCode===DOWN_ARROW){
-    moved = moveDown();
-  }
-  if(moved){
-    addRandomTwo();
-    if(!canMove()){
-      gameOver = true;
-    }
+  if(keyCode === 32 && !gameOver){
+    var bl = {
+      x: player.x,
+      y: player.y - player.r - 4,
+      r: 4
+    };
+    bullets.push(bl);
   }
 }
