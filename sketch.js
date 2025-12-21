@@ -1,228 +1,183 @@
-const SIZE = 4;
-const CELL = 100;
-let grid;
-let score = 0;
+const GRID = 8;
+const CELL = 50;
+const EMPTY = 0;
+const BLACK = 1;
+const WHITE = 2;
+let board = [];
+let currentPlayer = BLACK;
 let gameOver = false;
-function initGrid() {
-  grid = [];
-  for (let r = 0; r < SIZE; r++) {
-    let row = [];
-    for (let c = 0; c < SIZE; c++) {
-      row.push(0);
-    }
-    grid.push(row);
-  }
-  addRandomTile();
-  addRandomTile();
-  score = 0;
-  gameOver = false;
+const dirs = [
+  {x:1,y:0},
+  {x:1,y:1},
+  {x:0,y:1},
+  {x:-1,y:1},
+  {x:-1,y:0},
+  {x:-1,y:-1},
+  {x:0,y:-1},
+  {x:1,y:-1}
+];
+function inBounds(x,y){
+  return x>=0 && x<GRID && y>=0 && y<GRID;
 }
-function addRandomTile() {
-  let empties = [];
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (grid[r][c] === 0) {
-        empties.push({ r: r, c: c });
-      }
-    }
-  }
-  if (empties.length === 0) {
-    return;
-  }
-  let idx = Math.floor(Math.random() * empties.length);
-  let cell = empties[idx];
-  grid[cell.r][cell.c] = 2;
+function opponent(color){
+  if(color===BLACK){return WHITE;}
+  return BLACK;
 }
-function copyGrid(src) {
-  let out = [];
-  for (let r = 0; r < SIZE; r++) {
-    let row = [];
-    for (let c = 0; c < SIZE; c++) {
-      row.push(src[r][c]);
+function tilesToFlip(x,y,color){
+  let flipsAll = [];
+  if(!inBounds(x,y)){return flipsAll;}
+  if(board[y][x]!==EMPTY){return flipsAll;}
+  for(let i=0;i<dirs.length;i++){
+    let dx = dirs[i].x;
+    let dy = dirs[i].y;
+    let nx = x+dx;
+    let ny = y+dy;
+    let flipsDir = [];
+    if(!inBounds(nx,ny)){continue;}
+    if(board[ny][nx]!==opponent(color)){continue;}
+    while(inBounds(nx,ny) && board[ny][nx]===opponent(color)){
+      flipsDir.push({x:nx,y:ny});
+      nx += dx;
+      ny += dy;
     }
-    out.push(row);
-  }
-  return out;
-}
-function rowsEqual(a, b) {
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (a[r][c] !== b[r][c]) {
-        return false;
+    if(inBounds(nx,ny) && board[ny][nx]===color && flipsDir.length>0){
+      for(let j=0;j<flipsDir.length;j++){
+        flipsAll.push(flipsDir[j]);
       }
     }
   }
-  return true;
+  return flipsAll;
 }
-function moveLeft() {
-  let moved = false;
-  for (let r = 0; r < SIZE; r++) {
-    let arr = [];
-    for (let c = 0; c < SIZE; c++) {
-      if (grid[r][c] !== 0) {
-        arr.push(grid[r][c]);
-      }
-    }
-    let newRow = [];
-    let i = 0;
-    while (i < arr.length) {
-      if (i + 1 < arr.length && arr[i] === arr[i + 1]) {
-        let merged = arr[i] * 2;
-        newRow.push(merged);
-        score += merged;
-        i += 2;
-      } else {
-        newRow.push(arr[i]);
-        i += 1;
-      }
-    }
-    while (newRow.length < SIZE) {
-      newRow.push(0);
-    }
-    for (let c = 0; c < SIZE; c++) {
-      if (grid[r][c] !== newRow[c]) {
-        moved = true;
-      }
-      grid[r][c] = newRow[c];
-    }
-  }
-  return moved;
-}
-function moveRight() {
-  let moved = false;
-  for (let r = 0; r < SIZE; r++) {
-    let arr = [];
-    for (let c = SIZE - 1; c >= 0; c--) {
-      if (grid[r][c] !== 0) {
-        arr.push(grid[r][c]);
-      }
-    }
-    let newRow = [];
-    let i = 0;
-    while (i < arr.length) {
-      if (i + 1 < arr.length && arr[i] === arr[i + 1]) {
-        let merged = arr[i] * 2;
-        newRow.push(merged);
-        score += merged;
-        i += 2;
-      } else {
-        newRow.push(arr[i]);
-        i += 1;
-      }
-    }
-    while (newRow.length < SIZE) {
-      newRow.push(0);
-    }
-    for (let c = 0; c < SIZE; c++) {
-      let val = newRow[SIZE - 1 - c];
-      if (grid[r][c] !== val) {
-        moved = true;
-      }
-      grid[r][c] = val;
-    }
-  }
-  return moved;
-}
-function moveUp() {
-  let moved = false;
-  for (let c = 0; c < SIZE; c++) {
-    let arr = [];
-    for (let r = 0; r < SIZE; r++) {
-      if (grid[r][c] !== 0) {
-        arr.push(grid[r][c]);
-      }
-    }
-    let newCol = [];
-    let i = 0;
-    while (i < arr.length) {
-      if (i + 1 < arr.length && arr[i] === arr[i + 1]) {
-        let merged = arr[i] * 2;
-        newCol.push(merged);
-        score += merged;
-        i += 2;
-      } else {
-        newCol.push(arr[i]);
-        i += 1;
-      }
-    }
-    while (newCol.length < SIZE) {
-      newCol.push(0);
-    }
-    for (let r = 0; r < SIZE; r++) {
-      if (grid[r][c] !== newCol[r]) {
-        moved = true;
-      }
-      grid[r][c] = newCol[r];
-    }
-  }
-  return moved;
-}
-function moveDown() {
-  let moved = false;
-  for (let c = 0; c < SIZE; c++) {
-    let arr = [];
-    for (let r = SIZE - 1; r >= 0; r--) {
-      if (grid[r][c] !== 0) {
-        arr.push(grid[r][c]);
-      }
-    }
-    let newCol = [];
-    let i = 0;
-    while (i < arr.length) {
-      if (i + 1 < arr.length && arr[i] === arr[i + 1]) {
-        let merged = arr[i] * 2;
-        newCol.push(merged);
-        score += merged;
-        i += 2;
-      } else {
-        newCol.push(arr[i]);
-        i += 1;
-      }
-    }
-    while (newCol.length < SIZE) {
-      newCol.push(0);
-    }
-    for (let r = 0; r < SIZE; r++) {
-      let val = newCol[SIZE - 1 - r];
-      if (grid[r][c] !== val) {
-        moved = true;
-      }
-      grid[r][c] = val;
-    }
-  }
-  return moved;
-}
-function canMove() {
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (grid[r][c] === 0) {
-        return true;
-      }
-      if (c + 1 < SIZE && grid[r][c] === grid[r][c + 1]) {
-        return true;
-      }
-      if (r + 1 < SIZE && grid[r][c] === grid[r + 1][c]) {
-        return true;
-      }
+function hasAnyValidMove(color){
+  for(let y=0;y<GRID;y++){
+    for(let x=0;x<GRID;x++){
+      let flips = tilesToFlip(x,y,color);
+      if(flips.length>0){return true;}
     }
   }
   return false;
 }
-function setup() {
-  createCanvas(CELL * SIZE, CELL * SIZE);
-  initGrid();
-  textAlign(CENTER, CENTER);
-  rectMode(CORNER);
-  noStroke();
+function applyMove(x,y,color){
+  let flips = tilesToFlip(x,y,color);
+  if(flips.length===0){return false;}
+  board[y][x]=color;
+  for(let i=0;i<flips.length;i++){
+    let fx = flips[i].x;
+    let fy = flips[i].y;
+    board[fy][fx]=color;
+  }
+  return true;
 }
-function draw() {
-  background(187, 173, 160);
-  drawGrid();
-  drawTiles();
-  drawScore();
-  if (gameOver) {
-    fill(0, 0, 0, 150);
-    rect(0, 0, width, height);
-    fill(255);
-    textSize(32);
-    text(
+function aiMove(){
+  let safety = 0;
+  while(safety<64){
+    safety++;
+    if(!hasAnyValidMove(WHITE)){
+      if(!hasAnyValidMove(BLACK)){gameOver=true;return;}
+      currentPlayer = BLACK;
+      return;
+    }
+    let bestMoves = [];
+    let bestScore = -1;
+    for(let y=0;y<GRID;y++){
+      for(let x=0;x<GRID;x++){
+        if(board[y][x]!==EMPTY){continue;}
+        let flips = tilesToFlip(x,y,WHITE);
+        if(flips.length>0){
+          if(flips.length>bestScore){
+            bestScore = flips.length;
+            bestMoves = [{x:x,y:y,flips:flips}];
+          } else if(flips.length===bestScore){
+            bestMoves.push({x:x,y:y,flips:flips});
+          }
+        }
+      }
+    }
+    if(bestMoves.length===0){
+      if(!hasAnyValidMove(BLACK)){gameOver=true;return;}
+      currentPlayer = BLACK;
+      return;
+    }
+    let choiceIndex = Math.floor(Math.random()*bestMoves.length);
+    let mv = bestMoves[choiceIndex];
+    applyMove(mv.x,mv.y,WHITE);
+    currentPlayer = BLACK;
+    if(hasAnyValidMove(BLACK)){
+      return;
+    } else {
+      currentPlayer = WHITE;
+      continue;
+    }
+  }
+  gameOver = true;
+}
+function initBoard(){
+  board = [];
+  for(let y=0;y<GRID;y++){
+    let row = [];
+    for(let x=0;x<GRID;x++){
+      row.push(EMPTY);
+    }
+    board.push(row);
+  }
+  let m = GRID/2;
+  board[m-1][m-1]=WHITE;
+  board[m][m]=WHITE;
+  board[m-1][m]=BLACK;
+  board[m][m-1]=BLACK;
+  currentPlayer = BLACK;
+  gameOver = false;
+}
+function setup(){
+  createCanvas(400,400);
+  initBoard();
+}
+function draw(){
+  background(34,139,34);
+  stroke(0);
+  for(let i=0;i<=GRID;i++){
+    line(i*CELL,0,i*CELL,GRID*CELL);
+    line(0,i*CELL,GRID*CELL,i*CELL);
+  }
+  for(let y=0;y<GRID;y++){
+    for(let x=0;x<GRID;x++){
+      let v = board[y][x];
+      if(v===BLACK){
+        fill(0);
+        noStroke();
+        ellipseMode(CORNER);
+        ellipse(x*CELL+4,y*CELL+4,CELL-8,CELL-8);
+      } else if(v===WHITE){
+        fill(255);
+        noStroke();
+        ellipseMode(CORNER);
+        ellipse(x*CELL+4,y*CELL+4,CELL-8,CELL-8);
+      }
+    }
+  }
+  if(!gameOver && currentPlayer===BLACK){
+    noStroke();
+    fill(255,255,0,180);
+    for(let y=0;y<GRID;y++){
+      for(let x=0;x<GRID;x++){
+        let flips = tilesToFlip(x,y,BLACK);
+        if(flips.length>0){
+          ellipseMode(CENTER);
+          ellipse(x*CELL+CELL/2,y*CELL+CELL/2,10,10);
+        }
+      }
+    }
+  }
+  let blackCount = 0;
+  let whiteCount = 0;
+  for(let y=0;y<GRID;y++){
+    for(let x=0;x<GRID;x++){
+      if(board[y][x]===BLACK){blackCount++;}
+      if(board[y][x]===WHITE){whiteCount++;}
+    }
+  }
+  fill(255);
+  stroke(0);
+  textSize(14);
+  textAlign(LEFT,TOP);
+  text(
