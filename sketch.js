@@ -119,5 +119,6 @@ function draw(){
   fill(255);
   rect(player.x, player.y, player.w, player.h);
   rect(cpu.x, cpu.y, cpu.w, cpu.h);
+  fill(255, 204, 0);
   ellipse(ball.x, ball.y, ball.r * 2, ball.r * 2);
 }
