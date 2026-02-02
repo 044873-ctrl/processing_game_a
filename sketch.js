@@ -134,6 +134,7 @@ function drawPaddles(){
   rect(cpuX,cpuY,paddleW,paddleH);
 }
 function drawBall(){
+  fill(255,204,0);
   ellipse(ball.x,ball.y,ball.r*2,ball.r*2);
 }
 function drawMiddleLine(){
