@@ -1,1 +1,139 @@
-let player,platforms,stars,score,gameOver,gravity,maxFallSpeed,moveSpeed,jumpForce,playerSize;function setup(){createCanvas(600,400);initGame();}function initGame(){playerSize=30;gravity=0.6;maxFallSpeed=12;moveSpeed=4;jumpForce=12;score=0;gameOver=false;platforms=[];stars=[];platforms.push({x:0,y:height-20,w:width,h:20});platforms.push({x:80,y:300,w:120,h:10});platforms.push({x:240,y:240,w:100,h:10});platforms.push({x:380,y:180,w:140,h:10});platforms.push({x:520,y:120,w:60,h:10});player={x:50,y:height-20-playerSize,vx:0,vy:0,canJump:true,size:playerSize};for(let i=0;i<platforms.length;i++){let p=platforms[i];if(i>0){stars.push({x:p.x+Math.max(10,Math.min(p.w-10,p.w/2)),y:p.y-12,r:6});}}for(let i=0;i<6;i++){let sx=Math.floor(40+Math.random()*(width-80));let sy=Math.floor(40+Math.random()*(height-140));stars.push({x:sx,y:sy,r:6});}}function draw(){background("#0b1d3a");if(!gameOver){player.vx=0;if(keyIsDown(LEFT_ARROW)||keyIsDown(65)){player.vx=-moveSpeed;}else if(keyIsDown(RIGHT_ARROW)||keyIsDown(68)){player.vx=moveSpeed;}player.x+=player.vx;player.x=constrain(player.x,0,width-player.size);player.vy+=gravity;if(player.vy>maxFallSpeed){player.vy=maxFallSpeed;}let prevBottom=player.y+player.size;let newY=player.y+player.vy;let landed=false;for(let i=0;i<platforms.length;i++){let p=platforms[i];let withinX=(player.x+player.size>p.x&&player.x<p.x+p.w);let newBottom=newY+player.size;if(player.vy>=0&&withinX&&prevBottom<=p.y&&newBottom>=p.y){newY=p.y-player.size;player.vy=0;landed=true;break;}}player.y=newY;player.canJump=landed;if(player.y>height){gameOver=true;}for(let i=stars.length-1;i>=0;i--){let s=stars[i];let dx=(player.x+player.size/2)-s.x;let dy=(player.y+player.size/2)-s.y;let dist=Math.sqrt(dx*dx+dy*dy);if(dist<player.size/2+s.r){stars.splice(i,1);score+=10;}}}fill(200);for(let i=0;i<platforms.length;i++){let p=platforms[i];rect(p.x,p.y,p.w,p.h);}fill("#ff7b7b");rect(player.x,player.y,player.size,player.size);fill("#ffd54f");noStroke();for(let i=0;i<stars.length;i++){let s=stars[i];ellipse(s.x,s.y,s.r*2,s.r*2);}fill(255);textSize(16);textAlign(LEFT,TOP);text("Score: "+score,10,10);if(gameOver){fill(255);textSize(48);textAlign(CENTER,CENTER);text("GAME OVER",width/2,height/2-20);textSize(16);text("Press R to retry",width/2,height/2+20);}}function keyPressed(){if((key=="r"||key=="R"||keyCode==82)&&gameOver){initGame();}if(!gameOver&&(key==" "||keyCode==32)){if(player.canJump){player.vy=-jumpForce;player.canJump=false;}}}
+var player;
+var platforms;
+var stars;
+var score;
+var gameOver;
+var gravity;
+var jumpForce;
+var maxFall;
+var speed;
+var groundHeight;
+var retryButton;
+function initGame(){
+  platforms = [];
+  stars = [];
+  score = 0;
+  gameOver = false;
+  gravity = 0.7;
+  jumpForce = 12;
+  maxFall = 15;
+  speed = 4;
+  groundHeight = 20;
+  player = {x:50,y:0,w:30,h:30,vx:0,vy:0,canJump:false,onGround:false};
+  player.y = height - groundHeight - player.h;
+  player.canJump = true;
+  platforms.push({x:0,y:height-groundHeight,w:width,h:groundHeight});
+  for(var i=0;i<6;i++){
+    var pw = Math.floor(random(80,160));
+    var px = Math.floor(random(0, width - pw));
+    var py = Math.floor(random(60, height - 120));
+    platforms.push({x:px,y:py,w:pw,h:10});
+  }
+  for(var i=0;i<platforms.length;i++){
+    var p = platforms[i];
+    if(p.y < height - groundHeight){
+      if(random()<0.6){
+        var sx = constrain(p.x + random(10, p.w-10), 10, width-10);
+        var sy = p.y - 12;
+        stars.push({x:sx,y:sy,r:8});
+      }
+    }
+  }
+  for(var i=0;i<6;i++){
+    var sx = random(20, width-20);
+    var sy = random(40, height-120);
+    stars.push({x:sx,y:sy,r:8});
+  }
+  retryButton = {w:160,h:40,x:(width-160)/2,y:(height-40)/2+40};
+}
+function setup(){
+  createCanvas(600,400);
+  initGame();
+}
+function draw(){
+  background(4,24,60);
+  fill(255,255,255);
+  noStroke();
+  textSize(16);
+  textAlign(LEFT,TOP);
+  text("Score: "+score,10,10);
+  if(!gameOver){
+    var prevBottom = player.y + player.h;
+    if(keyIsDown(LEFT_ARROW)){ player.x -= speed; }
+    if(keyIsDown(RIGHT_ARROW)){ player.x += speed; }
+    if(player.x < 0) player.x = 0;
+    if(player.x + player.w > width) player.x = width - player.w;
+    player.vy += gravity;
+    if(player.vy > maxFall) player.vy = maxFall;
+    player.y += player.vy;
+    player.onGround = false;
+    for(var i=0;i<platforms.length;i++){
+      var p = platforms[i];
+      if(player.vy >= 0){
+        var playerBottom = player.y + player.h;
+        var playerPrevBottom = prevBottom;
+        var overlapX = (player.x + player.w) > p.x && player.x < (p.x + p.w);
+        if(playerPrevBottom <= p.y && playerBottom >= p.y && overlapX){
+          player.y = p.y - player.h;
+          player.vy = 0;
+          player.onGround = true;
+          player.canJump = true;
+        }
+      }
+    }
+    for(var i=stars.length-1;i>=0;i--){
+      var s = stars[i];
+      if(s.x > player.x && s.x < player.x + player.w && s.y > player.y && s.y < player.y + player.h){
+        stars.splice(i,1);
+        score += 10;
+      }
+    }
+    if(player.y > height){
+      gameOver = true;
+    }
+  }
+  fill(200);
+  for(var i=0;i<platforms.length;i++){
+    var p = platforms[i];
+    rect(p.x, p.y, p.w, p.h);
+  }
+  fill(255);
+  rect(player.x, player.y, player.w, player.h);
+  fill(255,204,0);
+  noStroke();
+  for(var i=0;i<stars.length;i++){
+    var s = stars[i];
+    ellipse(s.x, s.y, s.r*2, s.r*2);
+  }
+  if(gameOver){
+    fill(255);
+    textSize(36);
+    textAlign(CENTER,CENTER);
+    text("GAME OVER", width/2, height/2 - 20);
+    fill(100);
+    rect(retryButton.x, retryButton.y, retryButton.w, retryButton.h, 6);
+    fill(255);
+    textSize(18);
+    textAlign(CENTER,CENTER);
+    text("Retry (R)", width/2, retryButton.y + retryButton.h/2);
+  }
+}
+function keyPressed(){
+  if(keyCode === 32){
+    if(player.canJump){
+      player.vy = -jumpForce;
+      player.canJump = false;
+      player.onGround = false;
+    }
+  }
+  if(gameOver && (key === 'r' || key === 'R')){
+    initGame();
+  }
+}
+function mousePressed(){
+  if(gameOver){
+    if(mouseX >= retryButton.x && mouseX <= retryButton.x + retryButton.w && mouseY >= retryButton.y && mouseY <= retryButton.y + retryButton.h){
+      initGame();
+    }
+  }
+}
