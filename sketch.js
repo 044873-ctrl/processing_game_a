@@ -62,7 +62,7 @@ function draw(){
   }
   for(let i=bullets.length-1;i>=0;i--){
     let b=bullets[i];
-    fill(255,255,0);
+    fill(0);
     noStroke();
     ellipse(b.x,b.y,b.r*2,b.r*2);
     b.y-=b.vy;
