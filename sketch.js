@@ -154,7 +154,7 @@ function draw(){
   drawScene();
 }
 function keyPressed(){
-  if((key===' ' || keyCode===32) && !gameOver){
+  if((keyCode===UP_ARROW || keyCode===38) && !gameOver){
     if(player.onGround){
       player.vy=jumpVel;
       player.onGround=false;
