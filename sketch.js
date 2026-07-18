@@ -9,6 +9,9 @@ var platforms=[];
 var coins=[];
 var score=0;
 var gameOver=false;
+function rectsOverlap(a,b){
+  return !(a.x+a.w<=b.x||a.x>=b.x+b.w||a.y+a.h<=b.y||a.y>=b.y+b.h);
+}
 function createPlatforms(){
   platforms=[];
   var ground={x:0,y:canvasH-groundHeight,w:canvasW,h:groundHeight,isGround:true};
@@ -19,24 +22,56 @@ function createPlatforms(){
   var y;
   for(var i=0;i<5;i++){
     w=floor(random(80,140));
-    x=floor(random(0,canvasW-w));
+    var placed=false;
+    var tries=0;
+    var maxTries=200;
     if(i===0){
       y=lowestY;
+      while(!placed&&tries<maxTries){
+        x=floor(random(0,canvasW-w));
+        var plat={x:x,y:y,w:w,h:10,isGround:false};
+        var ov=false;
+        for(var j=0;j<platforms.length;j++){
+          if(rectsOverlap(plat,platforms[j])){ov=true;break;}
+        }
+        if(!ov){platforms.push(plat);placed=true;}else{tries++;}
+      }
     } else {
-      y=floor(random(60,canvasH-groundHeight-80));
+      while(!placed&&tries<maxTries){
+        x=floor(random(0,canvasW-w));
+        y=floor(random(60,canvasH-groundHeight-80));
+        var plat2={x:x,y:y,w:w,h:10,isGround:false};
+        var ov2=false;
+        for(var k=0;k<platforms.length;k++){
+          if(rectsOverlap(plat2,platforms[k])){ov2=true;break;}
+        }
+        if(!ov2){platforms.push(plat2);placed=true;}else{tries++;}
+      }
+      if(!placed){
+        for(var sx=0;sx<=canvasW-w && !placed;sx+=10){
+          x=sx;
+          y=floor(random(60,canvasH-groundHeight-80));
+          var plat3={x:x,y:y,w:w,h:10,isGround:false};
+          var ov3=false;
+          for(var m=0;m<platforms.length;m++){
+            if(rectsOverlap(plat3,platforms[m])){ov3=true;break;}
+          }
+          if(!ov3){platforms.push(plat3);placed=true;break;}
+        }
+      }
     }
-    var plat={x:x,y:y,w:w,h:10,isGround:false};
-    platforms.push(plat);
   }
 }
 function createCoins(){
   coins=[];
   for(var i=1;i<platforms.length;i++){
     var plat=platforms[i];
-    var cx=floor(random(plat.x+8,plat.x+plat.w-8));
-    var cy=plat.y-10;
-    var coin={x:cx,y:cy,r:8};
-    coins.push(coin);
+    if(plat.w>16){
+      var cx=floor(random(plat.x+8,plat.x+plat.w-8));
+      var cy=plat.y-10;
+      var coin={x:cx,y:cy,r:8};
+      coins.push(coin);
+    }
   }
   for(var j=0;j<3;j++){
     var cx2=floor(random(20,canvasW-20));
@@ -50,7 +85,7 @@ function resetGame(){
   gameOver=false;
   createPlatforms();
   createCoins();
-  player={x:50,y:canvasH-groundHeight-30,w:30,h:30,vx:0,vy:0,speed:3,onGround:true,hasTouchedPlatform:false,jumps:0};
+  player={x:50,y:canvasH-groundHeight-30,w:30,h:30,vx:0,vy:0,speed:3,onGround:true,hasTouchedPlatform:false};
 }
 function setup(){
   createCanvas(canvasW,canvasH);
@@ -72,7 +107,6 @@ function applyPlatformCollisions(){
         player.y=plat.y-player.h;
         player.vy=0;
         player.onGround=true;
-        player.jumps=0;
         if(!plat.isGround){
           player.hasTouchedPlatform=true;
         } else {
@@ -159,17 +193,6 @@ function keyPressed(){
     if(player.onGround){
       player.vy=jumpVel;
       player.onGround=false;
-      player.jumps=1;
-    }
-  }
-  if(keyCode===38 && !gameOver){
-    if(player.onGround){
-      player.vy=jumpVel;
-      player.onGround=false;
-      player.jumps=1;
-    } else if(player.jumps===1){
-      player.vy=jumpVel;
-      player.jumps=2;
     }
   }
   if(key==='r' || key==='R' || keyCode===82){
