@@ -1,25 +1,137 @@
-let COLS=10;
-let ROWS=20;
-let SIZE=30;
-let canvasW=COLS*SIZE;
-let canvasH=ROWS*SIZE;
-let grid=[];
-let pieces=[];
-let colors=[];
-let current=null;
+let canvasW=400,canvasH=600;
+let playerX,playerY;
+let playerSpeed=5,playerRadius=14;
+let bullets=[];
+let enemies=[];
+let particles=[];
+let stars=[];
 let score=0;
-let dropCounter=0;
-let normalDrop=30;
-let fastDrop=5;
 let gameOver=false;
-function copyMatrix(m){let out=[];for(let r=0;r<4;r++){out[r]=m[r].slice();}return out;}
-function rotateMatrix(m){let out=[];for(let r=0;r<4;r++){out[r]=[0,0,0,0];}for(let r=0;r<4;r++){for(let c=0;c<4;c++){out[c][3-r]=m[r][c];}}return out;}
-function collision(mat,x,y){for(let r=0;r<4;r++){for(let c=0;c<4;c++){if(mat[r][c]===1){let gx=x+c;let gy=y+r;if(gx<0||gx>=COLS) return true;if(gy>=ROWS) return true;if(gy>=0){if(grid[gy][gx]!==0) return true;}}}}return false;}
-function createNewPiece(){let idx=floor(random(0,pieces.length));let mat=copyMatrix(pieces[idx]);let x=Math.floor((COLS-4)/2);let y=0;current={mat:mat,x:x,y:y,idx:idx};if(collision(current.mat,current.x,current.y)){gameOver=true;}}
-function lockPiece(){for(let r=0;r<4;r++){for(let c=0;c<4;c++){if(current.mat[r][c]===1){let gx=current.x+c;let gy=current.y+r;if(gy>=0&&gy<ROWS&&gx>=0&&gx<COLS){grid[gy][gx]=current.idx+1;}}}}for(let i=ROWS-1;i>=0;i--){let full=true;for(let j=0;j<COLS;j++){if(grid[i][j]===0){full=false;break;}}if(full){grid.splice(i,1);let newRow=new Array(COLS);for(let k=0;k<COLS;k++){newRow[k]=0;}grid.unshift(newRow);score+=100;}}createNewPiece();dropCounter=0;}
-function setup(){createCanvas(canvasW,canvasH);for(let r=0;r<ROWS;r++){let row=[];for(let c=0;c<COLS;c++){row[c]=0;}grid[r]=row;}pieces=[[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],[[0,0,0,0],[0,1,1,0],[0,1,1,0],[0,0,0,0]],[[0,0,0,0],[0,1,0,0],[1,1,1,0],[0,0,0,0]],[[0,0,0,0],[1,0,0,0],[1,1,1,0],[0,0,0,0]],[[0,0,0,0],[0,0,1,0],[1,1,1,0],[0,0,0,0]],[[0,0,0,0],[0,1,1,0],[1,1,0,0],[0,0,0,0]],[[0,0,0,0],[1,1,0,0],[0,1,1,0],[0,0,0,0]]];colors=["#ff0000","#ff0000","#ff0000","#ff0000","#ff0000","#ff0000","#ff0000"];createNewPiece();textSize(16);textAlign(LEFT,TOP);}
-function rotateCurrent(){if(gameOver) return;let rotated=rotateMatrix(current.mat);let kicked=false;let offsets=[0,-1,1,-2,2];for(let i=0;i<offsets.length;i++){let ox=offsets[i];if(!collision(rotated,current.x+ox,current.y)){current.mat=rotated;current.x+=ox;kicked=true;break;}}}
-function moveCurrent(dx){if(gameOver) return;if(!collision(current.mat,current.x+dx,current.y)){current.x+=dx;}}
-function dropStep(){if(gameOver) return;if(!collision(current.mat,current.x,current.y+1)){current.y+=1;}else{lockPiece();}}
-function draw(){background(0);stroke(50);for(let r=0;r<ROWS;r++){for(let c=0;c<COLS;c++){let val=grid[r][c];if(val===0){fill(20);}else{fill(colors[val-1]);}rect(c*SIZE,r*SIZE,SIZE,SIZE);}}if(current!==null){for(let r=0;r<4;r++){for(let c=0;c<4;c++){if(current.mat[r][c]===1){let gx=current.x+c;let gy=current.y+r;if(gy>=0){fill(colors[current.idx]);rect(gx*SIZE,gy*SIZE,SIZE,SIZE);}}}}}let interval=normalDrop;if(keyIsDown(DOWN_ARROW)) interval=fastDrop;if(!gameOver){dropCounter++;if(dropCounter>=interval){dropStep();dropCounter=0;}}noStroke();fill(255);text("Score: "+score,5,5);if(gameOver){fill(255,0,0);textAlign(CENTER,CENTER);text("Game Over",canvasW/2,canvasH/2);textAlign(LEFT,TOP);}}
-function keyPressed(){if(gameOver) return;if(keyCode===LEFT_ARROW){moveCurrent(-1);dropCounter=0;}else if(keyCode===RIGHT_ARROW){moveCurrent(1);dropCounter=0;}else if(keyCode===UP_ARROW){rotateCurrent();dropCounter=0;}else if(keyCode===DOWN_ARROW){dropStep();dropCounter=0;}}
+function spawnEnemy(){
+  let enemyRadius=12;
+  let ex=random(enemyRadius,canvasW-enemyRadius);
+  let ey=-enemyRadius;
+  enemies.push({x:ex,y:ey,r:enemyRadius,vy:2});
+}
+function spawnParticles(x,y){
+  for(let k=0;k<5;k++){
+    let angle=random(0,TWO_PI);
+    let speed=random(1,3);
+    let vx=cos(angle)*speed;
+    let vy=sin(angle)*speed;
+    particles.push({x:x,y:y,r:3,vx:vx,vy:vy,life:20});
+  }
+}
+function setup(){
+  createCanvas(canvasW,canvasH);
+  playerX=canvasW/2;
+  playerY=canvasH-30;
+  for(let i=0;i<30;i++){
+    stars.push({x:random(0,canvasW),y:random(0,canvasH),s:random(1,3),vy:random(0.5,2)});
+  }
+  textSize(16);
+  textAlign(LEFT,TOP);
+  frameRate(60);
+}
+function keyPressed(){
+  if(keyCode===32 && !gameOver){
+    bullets.push({x:playerX,y:playerY-playerRadius,r:4,vy:8});
+  }
+}
+function draw(){
+  background(0);
+  for(let i=0;i<stars.length;i++){
+    let st=stars[i];
+    fill(255);
+    noStroke();
+    ellipse(st.x,st.y,st.s,st.s);
+    st.y+=st.vy;
+    if(st.y>canvasH){
+      st.y=-st.s;
+      st.x=random(0,canvasW);
+    }
+  }
+  if(!gameOver){
+    if(keyIsDown(LEFT_ARROW)){
+      playerX-=playerSpeed;
+    }
+    if(keyIsDown(RIGHT_ARROW)){
+      playerX+=playerSpeed;
+    }
+    playerX=constrain(playerX,playerRadius,canvasW-playerRadius);
+  }
+  for(let i=bullets.length-1;i>=0;i--){
+    let b=bullets[i];
+    fill(255,255,0);
+    noStroke();
+    ellipse(b.x,b.y,b.r*2,b.r*2);
+    b.y-=b.vy;
+    if(b.y<-b.r){
+      bullets.splice(i,1);
+    }
+  }
+  for(let i=enemies.length-1;i>=0;i--){
+    let e=enemies[i];
+    fill(200,0,0);
+    noStroke();
+    ellipse(e.x,e.y,e.r*2,e.r*2);
+    e.y+=e.vy;
+    if(e.y>canvasH+e.r){
+      enemies.splice(i,1);
+    } else {
+      let dx=e.x-playerX;
+      let dy=e.y-playerY;
+      let dist2=dx*dx+dy*dy;
+      let sumr=e.r+playerRadius;
+      if(dist2<=sumr*sumr){
+        gameOver=true;
+      }
+    }
+  }
+  for(let i=enemies.length-1;i>=0;i--){
+    let e=enemies[i];
+    let hit=false;
+    for(let j=bullets.length-1;j>=0;j--){
+      let b=bullets[j];
+      let dx=e.x-b.x;
+      let dy=e.y-b.y;
+      let dist2=dx*dx+dy*dy;
+      let sumr=e.r+b.r;
+      if(dist2<=sumr*sumr){
+        enemies.splice(i,1);
+        bullets.splice(j,1);
+        spawnParticles(e.x,e.y);
+        score++;
+        hit=true;
+        break;
+      }
+    }
+    if(hit) continue;
+  }
+  for(let i=particles.length-1;i>=0;i--){
+    let p=particles[i];
+    fill(255,150,0,200);
+    noStroke();
+    ellipse(p.x,p.y,p.r*2,p.r*2);
+    p.x+=p.vx;
+    p.y+=p.vy;
+    p.life--;
+    if(p.life<=0){
+      particles.splice(i,1);
+    }
+  }
+  fill(0,0,255);
+  noStroke();
+  ellipse(playerX,playerY,playerRadius*2,playerRadius*2);
+  fill(255);
+  text("Score: "+score,8,8);
+  if(gameOver){
+    textAlign(CENTER,CENTER);
+    textSize(32);
+    fill(255,0,0);
+    text("GAME OVER",canvasW/2,canvasH/2);
+  }
+  if(!gameOver && frameCount%60===0){
+    spawnEnemy();
+  }
+}
