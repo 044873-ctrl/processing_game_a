@@ -35,7 +35,7 @@ function setup(){
 }
 function keyPressed(){
   if(keyCode===32 && !gameOver){
-    bullets.push({x:playerX,y:playerY-playerRadius,r:4,vy:8});
+    bullets.push({x:playerX,y:playerY-playerRadius-2,r:4,vy:8});
   }
 }
 function draw(){
@@ -122,7 +122,13 @@ function draw(){
   }
   fill(0,0,255);
   noStroke();
-  ellipse(playerX,playerY,playerRadius*2,playerRadius*2);
+  let tx1=playerX;
+  let ty1=playerY-playerRadius;
+  let tx2=playerX-playerRadius;
+  let ty2=playerY+playerRadius;
+  let tx3=playerX+playerRadius;
+  let ty3=playerY+playerRadius;
+  triangle(tx1,ty1,tx2,ty2,tx3,ty3);
   fill(255);
   text("Score: "+score,8,8);
   if(gameOver){
@@ -130,6 +136,8 @@ function draw(){
     textSize(32);
     fill(255,0,0);
     text("GAME OVER",canvasW/2,canvasH/2);
+    textSize(16);
+    textAlign(LEFT,TOP);
   }
   if(!gameOver && frameCount%60===0){
     spawnEnemy();
