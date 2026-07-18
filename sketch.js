@@ -7,7 +7,6 @@ var jumpVel=-11;
 var player;
 var platforms=[];
 var coins=[];
-var redCoin=null;
 var score=0;
 var gameOver=false;
 function rectsOverlap(a,b){
@@ -23,6 +22,7 @@ function createPlatforms(){
   var y;
   for(var i=0;i<5;i++){
     w=floor(random(80,140));
+    w=Math.max(10,Math.floor(w*1.2));
     var placed=false;
     var tries=0;
     var maxTries=200;
@@ -65,45 +65,20 @@ function createPlatforms(){
 }
 function createCoins(){
   coins=[];
-  var total=floor(random(8,11));
-  for(var i=0;i<total;i++){
-    var placed=false;
-    var tries=0;
-    while(!placed&&tries<200){
-      if(random()<0.6 && platforms.length>1){
-        var pidx=floor(random(1,platforms.length));
-        var plat=platforms[pidx];
-        if(plat.w>16){
-          var cx=floor(random(plat.x+8,plat.x+plat.w-8));
-          var cy=plat.y-10;
-          coins.push({x:cx,y:cy,r:8});
-          placed=true;
-        } else {tries++;}
-      } else {
-        var cx2=floor(random(20,canvasW-20));
-        var cy2=floor(random(40,canvasH-groundHeight-120));
-        coins.push({x:cx2,y:cy2,r:8});
-        placed=true;
-      }
-    }
-    if(!placed){
-      var cx3=floor(random(20,canvasW-20));
-      var cy3=floor(random(40,canvasH-groundHeight-120));
-      coins.push({x:cx3,y:cy3,r:8});
+  for(var i=1;i<platforms.length;i++){
+    var plat=platforms[i];
+    if(plat.w>16){
+      var cx=floor(random(plat.x+8,plat.x+plat.w-8));
+      var cy=plat.y-10;
+      var coin={x:cx,y:cy,r:8};
+      coins.push(coin);
     }
   }
-}
-function createRedCoin(){
-  redCoin=null;
-  if(platforms.length>1){
-    var idx=floor(random(1,platforms.length));
-    var plat=platforms[idx];
-    var left=plat.x+10;
-    var right=plat.x+plat.w-10;
-    if(right-left<10){left=plat.x+2;right=plat.x+plat.w-2;}
-    var rx=floor(random(left,right));
-    var ry=plat.y-10;
-    redCoin={x:rx,y:ry,r:10,vx:1.6,dir:random()<0.5?1:-1,left:left,right:right,platIndex:idx};
+  for(var j=0;j<5;j++){
+    var cx2=floor(random(20,canvasW-20));
+    var cy2=floor(random(40,canvasH-groundHeight-120));
+    var coin2={x:cx2,y:cy2,r:8};
+    coins.push(coin2);
   }
 }
 function resetGame(){
@@ -111,8 +86,7 @@ function resetGame(){
   gameOver=false;
   createPlatforms();
   createCoins();
-  createRedCoin();
-  player={x:50,y:canvasH-groundHeight-30,w:30,h:30,vx:0,vy:0,speed:3,onGround:true,hasTouchedPlatform:false,jumpsRemaining:2};
+  player={x:50,y:canvasH-groundHeight-30,w:30,h:30,vx:0,vy:0,speed:3,onGround:true,hasTouchedPlatform:false};
 }
 function setup(){
   createCanvas(canvasW,canvasH);
@@ -134,7 +108,6 @@ function applyPlatformCollisions(){
         player.y=plat.y-player.h;
         player.vy=0;
         player.onGround=true;
-        player.jumpsRemaining=2;
         if(!plat.isGround){
           player.hasTouchedPlatform=true;
         } else {
@@ -162,19 +135,13 @@ function updatePlayer(){
     player.x+=player.speed;
   }
   player.vy+=gravity;
-  if(player.vy>maxFall){player.vy=maxFall;}
+  if(player.vy>maxFall){
+    player.vy=maxFall;
+  }
   player.y+=player.vy;
   if(player.x<0){player.x=0;}
   if(player.x+player.w>canvasW){player.x=canvasW-player.w;}
   applyPlatformCollisions();
-}
-function updateRedCoin(){
-  if(!redCoin || gameOver){return;}
-  redCoin.x+=redCoin.vx*redCoin.dir;
-  if(redCoin.x<redCoin.left){redCoin.x=redCoin.left;redCoin.dir*=-1;}
-  if(redCoin.x>redCoin.right){redCoin.x=redCoin.right;redCoin.dir*=-1;}
-  var plat=platforms[redCoin.platIndex];
-  if(plat){redCoin.y=plat.y-redCoin.r;}
 }
 function checkCoinCollisions(){
   for(var i=coins.length-1;i>=0;i--){
@@ -186,15 +153,6 @@ function checkCoinCollisions(){
     if(overlap){
       coins.splice(i,1);
       score+=10;
-    }
-  }
-  if(redCoin && !gameOver){
-    var rx=redCoin.x;
-    var ry=redCoin.y;
-    var rr=redCoin.r;
-    var rovr=(player.x<rx+rr && player.x+player.w>rx-rr && player.y<ry+rr && player.y+player.h>ry-rr);
-    if(rovr){
-      gameOver=true;
     }
   }
 }
@@ -210,10 +168,6 @@ function drawScene(){
     var co=coins[j];
     fill(255,204,0);
     ellipse(co.x,co.y,co.r*2,co.r*2);
-  }
-  if(redCoin){
-    fill(200,50,50);
-    ellipse(redCoin.x,redCoin.y,redCoin.r*2,redCoin.r*2);
   }
   fill(255);
   rect(player.x,player.y,player.w,player.h);
@@ -232,16 +186,14 @@ function drawScene(){
 }
 function draw(){
   updatePlayer();
-  updateRedCoin();
   checkCoinCollisions();
   drawScene();
 }
 function keyPressed(){
-  if((keyCode===UP_ARROW || keyCode===38) && !gameOver){
-    if(player.jumpsRemaining>0){
+  if((key===' ' || keyCode===32) && !gameOver){
+    if(player.onGround){
       player.vy=jumpVel;
       player.onGround=false;
-      player.jumpsRemaining--;
     }
   }
   if(key==='r' || key==='R' || keyCode===82){
