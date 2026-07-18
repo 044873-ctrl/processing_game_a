@@ -50,7 +50,7 @@ function resetGame(){
   gameOver=false;
   createPlatforms();
   createCoins();
-  player={x:50,y:canvasH-groundHeight-30,w:30,h:30,vx:0,vy:0,speed:3,onGround:true,hasTouchedPlatform:false};
+  player={x:50,y:canvasH-groundHeight-30,w:30,h:30,vx:0,vy:0,speed:3,onGround:true,hasTouchedPlatform:false,jumps:0};
 }
 function setup(){
   createCanvas(canvasW,canvasH);
@@ -72,6 +72,7 @@ function applyPlatformCollisions(){
         player.y=plat.y-player.h;
         player.vy=0;
         player.onGround=true;
+        player.jumps=0;
         if(!plat.isGround){
           player.hasTouchedPlatform=true;
         } else {
@@ -154,10 +155,21 @@ function draw(){
   drawScene();
 }
 function keyPressed(){
-  if((keyCode===UP_ARROW || keyCode===38) && !gameOver){
+  if((key===' ' || keyCode===32) && !gameOver){
     if(player.onGround){
       player.vy=jumpVel;
       player.onGround=false;
+      player.jumps=1;
+    }
+  }
+  if(keyCode===38 && !gameOver){
+    if(player.onGround){
+      player.vy=jumpVel;
+      player.onGround=false;
+      player.jumps=1;
+    } else if(player.jumps===1){
+      player.vy=jumpVel;
+      player.jumps=2;
     }
   }
   if(key==='r' || key==='R' || keyCode===82){
