@@ -7,6 +7,8 @@ let particles=[];
 let stars=[];
 let score=0;
 let gameOver=false;
+let playerHits=0;
+let maxHits=3;
 function spawnEnemy(){
   let enemyRadius=12;
   let ex=random(enemyRadius,canvasW-enemyRadius);
@@ -84,7 +86,12 @@ function draw(){
       let dist2=dx*dx+dy*dy;
       let sumr=e.r+playerRadius;
       if(dist2<=sumr*sumr){
-        gameOver=true;
+        spawnParticles(e.x,e.y);
+        enemies.splice(i,1);
+        playerHits++;
+        if(playerHits>=maxHits){
+          gameOver=true;
+        }
       }
     }
   }
@@ -125,11 +132,15 @@ function draw(){
   triangle(playerX,playerY-playerRadius,playerX-playerRadius,playerY+playerRadius,playerX+playerRadius,playerY+playerRadius);
   fill(255);
   text("Score: "+score,8,8);
+  textAlign(RIGHT,TOP);
+  text("Hits: "+playerHits+"/"+maxHits,canvasW-8,8);
+  textAlign(LEFT,TOP);
   if(gameOver){
     textAlign(CENTER,CENTER);
     textSize(32);
     fill(255,0,0);
     text("GAME OVER",canvasW/2,canvasH/2);
+    textSize(16);
   }
   if(!gameOver && frameCount%60===0){
     spawnEnemy();
