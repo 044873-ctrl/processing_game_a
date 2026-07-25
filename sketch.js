@@ -1,1 +1,74 @@
-var cols=10;var rows=20;var cell=30;var board=[];for(var r=0;r<rows;r++){var rowArr=[];for(var c=0;c<cols;c++){rowArr.push(0);}board.push(rowArr);}var pieces=[[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],[[2,2,0,0],[2,2,0,0],[0,0,0,0],[0,0,0,0]],[[0,3,0,0],[3,3,3,0],[0,0,0,0],[0,0,0,0]],[[0,0,4,0],[4,4,4,0],[0,0,0,0],[0,0,0,0]],[[5,0,0,0],[5,5,5,0],[0,0,0,0],[0,0,0,0]],[[0,6,6,0],[6,6,0,0],[0,0,0,0],[0,0,0,0]],[[7,7,0,0],[0,7,7,0],[0,0,0,0],[0,0,0,0]]];var colors=[null,'#00f0f0','#f0f000','#a000f0','#f08000','#0000f0','#00f000','#f00000'];var cur={mat:null,x:0,y:0,id:0,lock:0};var score=0;var gameOver=false;var lockDelay=30;function setup(){createCanvas(300,600);frameRate(60);noStroke();spawnPiece();}function draw(){background(51);for(var r=0;r<rows;r++){for(var c=0;c<cols;c++){var v=board[r][c];if(v!==0){fill(colors[v]);rect(c*cell,r*cell,cell,cell);}}}if(cur.mat!==null){for(var i=0;i<4;i++){for(var j=0;j<4;j++){var v=cur.mat[i][j];if(v!==0){var gx=cur.x+j;var gy=cur.y+i;if(gy>=0){fill(colors[cur.id]);rect(gx*cell,gy*cell,cell,cell);}}}}}fill(255);textSize(16);text('Score: '+score,10,20);if(!gameOver){var dropInterval=30;if(keyIsDown(DOWN_ARROW)){dropInterval=2;}if(valid(cur.x,cur.y+1,cur.mat)){if(frameCount%dropInterval===0){cur.y++;cur.lock=0;}}else{cur.lock++;if(cur.lock>=lockDelay){lockPiece();}}}else{fill(255,50,50);textSize(32);text('Game Over',40,height/2);textSize(20);text('Score: '+score,90,height/2+40);}}function spawnPiece(){var idx=floor(random(0,pieces.length));var mat=[];for(var i=0;i<4;i++){var row=[];for(var j=0;j<4;j++){row.push(pieces[idx][i][j]);}mat.push(row);}cur.mat=mat;cur.id=idx+1;cur.x=3;cur.y=0;cur.lock=0;if(!valid(cur.x,cur.y,cur.mat)){gameOver=true;}}function rotateMatrix(m){var nm=[[],[],[],[]];for(var i=0;i<4;i++){for(var j=0;j<4;j++){nm[j][3-i]=m[i][j];}}return nm;}function valid(px,py,m){for(var i=0;i<4;i++){for(var j=0;j<4;j++){if(m[i][j]!==0){var x=px+j;var y=py+i;if(x<0||x>=cols){return false;}if(y>=rows){return false;}if(y>=0){if(board[y][x]!==0){return false;}}}}}return true;}function lockPiece(){for(var i=0;i<4;i++){for(var j=0;j<4;j++){if(cur.mat[i][j]!==0){var x=cur.x+j;var y=cur.y+i;if(y>=0&&y<rows&&x>=0&&x<cols){board[y][x]=cur.id;}}}}clearLines();spawnPiece();}function clearLines(){for(var r=rows-1;r>=0;r--){var full=true;for(var c=0;c<cols;c++){if(board[r][c]===0){full=false;break;}}if(full){board.splice(r,1);var newRow=[];for(var k=0;k<cols;k++){newRow.push(0);}board.unshift(newRow);score+=100;r++;}}}function keyPressed(){if(gameOver){return;}if(keyCode===LEFT_ARROW){if(valid(cur.x-1,cur.y,cur.mat)){cur.x--;cur.lock=0;}}else if(keyCode===RIGHT_ARROW){if(valid(cur.x+1,cur.y,cur.mat)){cur.x++;cur.lock=0;}}else if(keyCode===UP_ARROW){var rm=rotateMatrix(cur.mat);if(valid(cur.x,cur.y,rm)){cur.mat=rm;cur.lock=0;}}}
+let canvasW=600;
+let canvasH=400;
+let player;
+let bullets=[];
+let enemies=[];
+let spawnTimer=0;
+let spawnInterval=40;
+let score=0;
+let lives=3;
+let gameOver=false;
+let leftPressed=false;
+let rightPressed=false;
+let shootPressed=false;
+let shootCooldown=0;
+let maxShootCooldown=12;
+function setup(){
+createCanvas(canvasW,canvasH);
+player={x:canvasW/2,y:canvasH-30,size:24,speed:5};
+}
+function draw(){
+background(30);
+if(!gameOver){
+if(leftPressed){player.x-=player.speed;}
+if(rightPressed){player.x+=player.speed;}
+if(player.x<player.size/2){player.x=player.size/2;}
+if(player.x>canvasW-player.size/2){player.x=canvasW-player.size/2;}
+if(shootPressed&&shootCooldown<=0){
+let bx={x:player.x,y:player.y-player.size/2-6,r:4,speed:7};
+bullets.push(bx);
+shootCooldown=maxShootCooldown;
+}
+if(shootCooldown>0){shootCooldown--; if(shootCooldown<0){shootCooldown=0;}}
+spawnTimer++;
+if(spawnTimer>=spawnInterval){
+spawnTimer=0;
+let ex={x:random(20,canvasW-20),y:-10,r:random(10,22),speed:random(1.6,3.2)};
+enemies.push(ex);
+}
+for(let i=bullets.length-1;i>=0;i--){
+let b=bullets[i];
+b.y-=b.speed;
+if(b.y<-10){bullets.splice(i,1);continue;}
+}
+for(let i=enemies.length-1;i>=0;i--){
+let e=enemies[i];
+e.y+=e.speed;
+if(e.y>canvasH+50){enemies.splice(i,1); lives--; if(lives<=0){gameOver=true;} continue;}
+for(let j=bullets.length-1;j>=0;j--){
+let b=bullets[j];
+let dx=b.x-e.x;let dy=b.y-e.y;let distSq=dx*dx+dy*dy;let radSum=(b.r+e.r);
+if(distSq<=radSum*radSum){
+bullets.splice(j,1);
+enemies.splice(i,1);
+score+=1;
+break;
+}
+}
+}
+for(let i=enemies.length-1;i>=0;i--){
+let e=enemies[i];let dx=e.x-player.x;let dy=e.y-player.y;let distSq=dx*dx+dy*dy;let radSum=(e.r+player.size/2);
+if(distSq<=radSum*radSum){enemies.splice(i,1);lives--; if(lives<=0){gameOver=true;}}
+}
+}
+fill(200);
+rectMode(CENTER);
+rect(player.x,player.y,player.size,player.size);
+for(let i=0;i<bullets.length;i++){let b=bullets[i];fill(255,200,50);noStroke();ellipse(b.x,b.y,b.r*2,b.r*2);}
+for(let i=0;i<enemies.length;i++){let e=enemies[i];fill(200,60,60);noStroke();ellipse(e.x,e.y,e.r*2,e.r*2);}
+fill(255);noStroke();textSize(16);textAlign(LEFT,TOP);text('Score: '+score,8,8);text('Lives: '+lives,8,28);
+if(gameOver){textAlign(CENTER,CENTER);textSize(32);text('GAME OVER',canvasW/2,canvasH/2-20);textSize(16);text('Press R to restart',canvasW/2,canvasH/2+16);}
+}
+function keyPressed(){if(keyCode===LEFT||key==='a'||key==='A'){leftPressed=true;}if(keyCode===RIGHT||key==='d'||key==='D'){rightPressed=true;}if(key===' '){shootPressed=true;}if(key==='r'||key==='R'){if(gameOver){resetGame();}}}
+function keyReleased(){if(keyCode===LEFT||key==='a'||key==='A'){leftPressed=false;}if(keyCode===RIGHT||key==='d'||key==='D'){rightPressed=false;}if(key===' '){shootPressed=false;}}
+function resetGame(){enemies=[];bullets=[];score=0;lives=3;gameOver=false;player.x=canvasW/2;spawnTimer=0;shootCooldown=0;}
